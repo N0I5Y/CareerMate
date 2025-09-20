@@ -117,8 +117,7 @@ module.exports = async function processor(job) {
 
   // 4) Bind data and render
   try {
-    doc.setData(data);
-    doc.render();
+    doc.render(data);
   } catch (err) {
     // Docxtemplater enriches errors with `properties.errors`
     logger.error({ err, details: err?.properties }, 'Docxtemplater render failed');
