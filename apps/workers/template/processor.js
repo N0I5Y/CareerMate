@@ -115,12 +115,31 @@ module.exports = async function processor(job) {
     throw new Error('Template engine init failed');
   }
 
+  // 4) Debug: Log the data structure being passed to template
+  logger.info({ 
+    dataKeys: Object.keys(data),
+    dataStructure: {
+      name: data.name,
+      contact: data.contact,
+      summaryLength: data.summary?.length,
+      experienceCount: data.experience?.length,
+      skillsCount: data.skills?.length,
+      educationCount: data.education?.length
+    }
+  }, 'Template data structure');
+
   // 4) Bind data and render
   try {
     doc.render(data);
   } catch (err) {
     // Docxtemplater enriches errors with `properties.errors`
     logger.error({ err, details: err?.properties }, 'Docxtemplater render failed');
+    
+    // Log more details about the error
+    if (err.properties && err.properties.errors) {
+      logger.error({ templateErrors: err.properties.errors }, 'Template processing errors');
+    }
+    
     throw new Error('Template render failed');
   }
 
