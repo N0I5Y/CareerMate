@@ -33,7 +33,27 @@ app.use('/api/templates', templates);
 // IMPORTANT: mount without a write gate; the router enforces POST/PUT only
 app.use('/api/prompt-versions', promptVersionsRouter);
 
-app.get('/healthz', (req, res) => res.json({ ok: true }));
+app.get('/healthz', async (req, res) => {
+  try {
+    // Test Redis connection
+    const { testRedisConnection } = require('./lib/queues');
+    const redisOk = await testRedisConnection();
+    
+    res.json({ 
+      ok: true, 
+      redis: redisOk ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    res.status(503).json({ 
+      ok: false, 
+      error: error.message,
+      redis: 'error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Errors
 app.use((err, req, res, next) => {

@@ -18,6 +18,10 @@ function buildConnection(redisUrl) {
       username: u.username || undefined,
       password: u.password || undefined,
       tls: u.protocol === 'rediss:' ? {} : undefined,
+      // Add connection timeout and retry settings
+      connectTimeout: 10000,
+      lazyConnect: true,
+      maxRetriesPerRequest: 3,
     };
     
     console.log('Redis connection config:', {
@@ -25,7 +29,8 @@ function buildConnection(redisUrl) {
       port: connection.port,
       hasUsername: !!connection.username,
       hasPassword: !!connection.password,
-      hasTLS: !!connection.tls
+      hasTLS: !!connection.tls,
+      protocol: u.protocol
     });
     
     return connection;
@@ -63,4 +68,19 @@ async function enqueueConvertJob(payload) {
   });
 }
 
-module.exports = { enqueueExtractJob, enqueueConvertJob };
+async function testRedisConnection() {
+  try {
+    if (!extractQ) {
+      throw new Error('Redis queues not initialized');
+    }
+    
+    // Try to get queue info (this tests the connection)
+    await extractQ.getWaiting();
+    return true;
+  } catch (error) {
+    console.error('Redis connection test failed:', error);
+    return false;
+  }
+}
+
+module.exports = { enqueueExtractJob, enqueueConvertJob, testRedisConnection };
