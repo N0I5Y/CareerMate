@@ -45,3 +45,9 @@ temp/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Kiro files (not needed in production)
+.kiro/
+
+# Web app (not needed for API-only deployment)
+apps/web/
