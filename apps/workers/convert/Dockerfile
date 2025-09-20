@@ -9,9 +9,8 @@ RUN apk add --no-cache \
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy package files for dependency installation
-COPY apps/workers/convert/package*.json ./
-COPY apps/workers/convert/.npmrc ./
+# Copy root package files for dependency installation
+COPY package*.json ./
 
 # Install dependencies
 RUN npm ci --omit=dev --legacy-peer-deps

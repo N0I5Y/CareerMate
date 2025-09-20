@@ -3,9 +3,8 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy package files for dependency installation
-COPY apps/workers/extract/package*.json ./
-COPY apps/workers/extract/.npmrc ./
+# Copy root package files for dependency installation
+COPY package*.json ./
 
 # Install dependencies
 RUN npm ci --omit=dev --legacy-peer-deps
