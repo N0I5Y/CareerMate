@@ -36,6 +36,15 @@
    - Set the railway.json config path to: `railway-optimize.json`
    - Deploy the service
 
+4. **Create Template Worker Service:**
+   ```bash
+   railway service create template-worker
+   railway link --service template-worker
+   ```
+   - In Railway dashboard, go to the template-worker service
+   - Set the railway.json config path to: `railway-template.json`
+   - Deploy the service
+
 ### Method 2: Using Railway CLI
 
 ```bash
@@ -47,6 +56,9 @@ railway up --service extract-worker --config railway-extract.json
 
 # Deploy optimize worker
 railway up --service optimize-worker --config railway-optimize.json
+
+# Deploy template worker
+railway up --service template-worker --config railway-template.json
 ```
 
 ## Environment Variables
@@ -56,7 +68,7 @@ Each worker service needs the same environment variables as the API:
 - `OPENAI_API_KEY`
 - `LOG_LEVEL`
 - `LOCAL_DATA_DIR=/usr/src/app/data`
-- Queue-specific variables (QUEUE_EXTRACT, QUEUE_CONVERT, etc.)
+- Queue-specific variables (QUEUE_EXTRACT, QUEUE_CONVERT, QUEUE_OPTIMIZE, QUEUE_TEMPLATE)
 
 ## Verification
 

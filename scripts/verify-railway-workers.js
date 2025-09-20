@@ -41,7 +41,8 @@ async function verifyRailwayWorkers() {
   const queues = [
     { name: 'resume.extract', description: 'Extract Worker', expectedWorkers: 1 },
     { name: 'resume.convert', description: 'Convert Worker', expectedWorkers: 1 },
-    { name: 'resume.optimize', description: 'Optimize Worker', expectedWorkers: 1 }
+    { name: 'resume.optimize', description: 'Optimize Worker', expectedWorkers: 1 },
+    { name: 'resume.template', description: 'Template Worker', expectedWorkers: 1 }
   ];
   
   console.log('\n📊 Checking Railway worker connections...\n');

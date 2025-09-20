@@ -16,7 +16,8 @@ console.log('======================================');
 const workers = [
   { name: 'convert', config: 'railway-convert.json', description: 'PDF conversion worker' },
   { name: 'extract', config: 'railway-extract.json', description: 'Text extraction worker' },
-  { name: 'optimize', config: 'railway-optimize.json', description: 'Resume optimization worker' }
+  { name: 'optimize', config: 'railway-optimize.json', description: 'Resume optimization worker' },
+  { name: 'template', config: 'railway-template.json', description: 'Template processing worker' }
 ];
 
 // Check if Railway CLI is installed

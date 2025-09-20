@@ -39,7 +39,8 @@ async function testWorkers() {
   const queues = [
     { name: 'resume.extract', description: 'Extract worker' },
     { name: 'resume.convert', description: 'Convert worker' },
-    { name: 'resume.optimize', description: 'Optimize worker' }
+    { name: 'resume.optimize', description: 'Optimize worker' },
+    { name: 'resume.template', description: 'Template worker' }
   ];
   
   console.log('🔍 Checking queue status...\n');
