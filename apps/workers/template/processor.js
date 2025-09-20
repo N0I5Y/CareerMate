@@ -20,6 +20,14 @@ const logBase = (typeof baseLogger?.child === 'function')
 const TEMPLATE_PATH = process.env.TEMPLATE_PATH ||
   path.resolve(process.cwd(), 'data/templates/resume.docx');
 
+// Alternative template paths to try
+const TEMPLATE_PATHS = [
+  TEMPLATE_PATH,
+  '/usr/src/app/data/templates/resume.docx',
+  path.resolve(__dirname, '../../../data/templates/resume.docx'),
+  path.resolve(process.cwd(), 'data/templates/resume.docx'),
+];
+
 module.exports = async function processor(job) {
   const { jobId, jsonKey, role, company, wantPdf } = job.data;
 
@@ -29,13 +37,36 @@ module.exports = async function processor(job) {
 
   logger.info({ jobId, jsonKey, role, company, wantPdf }, 'Templater job started');
 
-  // 1) Load the DOCX template from disk
+  // 1) Load the DOCX template from disk - try multiple paths
   let templateBuf;
-  try {
-    templateBuf = fs.readFileSync(TEMPLATE_PATH);
-  } catch (err) {
-    logger.error({ err, TEMPLATE_PATH }, 'Failed to read template file');
-    throw new Error(`Template file not found or unreadable at ${TEMPLATE_PATH}`);
+  let foundPath = null;
+  
+  for (const templatePath of TEMPLATE_PATHS) {
+    try {
+      if (fs.existsSync(templatePath)) {
+        templateBuf = fs.readFileSync(templatePath);
+        foundPath = templatePath;
+        logger.info({ templatePath }, 'Template file found');
+        break;
+      }
+    } catch (err) {
+      logger.debug({ err, templatePath }, 'Template path failed');
+    }
+  }
+  
+  if (!templateBuf) {
+    logger.error({ TEMPLATE_PATHS }, 'Failed to read template file from any path');
+    // List what files actually exist
+    try {
+      const dataDir = '/usr/src/app/data';
+      if (fs.existsSync(dataDir)) {
+        const files = fs.readdirSync(dataDir, { recursive: true });
+        logger.error({ dataDir, files }, 'Available files in data directory');
+      }
+    } catch (e) {
+      logger.error({ err: e }, 'Could not list data directory');
+    }
+    throw new Error(`Template file not found at any of the expected paths: ${TEMPLATE_PATHS.join(', ')}`);
   }
 
   // 2) Load resume JSON from storage

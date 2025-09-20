@@ -12,8 +12,11 @@ RUN npm ci --omit=dev --legacy-peer-deps
 # Copy the entire project (needed for shared modules)
 COPY . ./
 
-# Create data directory
-RUN mkdir -p /usr/src/app/data
+# Create data directory and ensure templates are available
+RUN mkdir -p /usr/src/app/data/templates
+
+# Explicitly copy template files
+COPY data/templates/ /usr/src/app/data/templates/
 
 # Set environment variables
 ENV NODE_ENV=production
