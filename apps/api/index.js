@@ -26,6 +26,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Basic root route for testing
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'CareerMate API is running!',
+    version: '2.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes
 app.use('/api/resumes', resumes);
 app.use('/api/templates', templates);
@@ -63,6 +72,28 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: { code, message: err.message || 'Internal error' } });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Careermate API listening on port ${PORT}`);
+// Add startup logging
+logger.info('Starting CareerMate API...');
+logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info(`Port: ${PORT}`);
+logger.info(`CORS Origin: ${ALLOW_ORIGIN}`);
+
+const server = app.listen(PORT, '0.0.0.0', () => {
+  logger.info(`✅ CareerMate API listening on port ${PORT}`);
+  logger.info(`🌐 Health check available at: http://localhost:${PORT}/healthz`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  logger.error('❌ Server error:', error);
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('🛑 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    logger.info('✅ Server closed');
+    process.exit(0);
+  });
 });
