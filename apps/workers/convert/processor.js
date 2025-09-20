@@ -1,6 +1,6 @@
 // apps/workers/convert/processor.js
 
-const { resolveKey, putObject } = require('./storage');
+const { resolveKey, putObject, getObject } = require('./storage');
 const { childLogger } = require('./logger');
 const path = require('path');
 const fs = require('fs/promises');
@@ -26,11 +26,28 @@ module.exports = async function processor(job) {
 
   logger.info({ docxKey, outKey }, 'Converter job started');
 
-  // Resolve DOCX absolute path (must exist on local FS)
-  const absDocxPath = resolveKey(docxKey);
+  // Create temporary directory for conversion
   const tmpOutDir = path.resolve(DATA_DIR, 'tmp', String(jobId || 'convert'));
-
   await fs.mkdir(tmpOutDir, { recursive: true });
+
+  // Handle both Redis storage and local file storage
+  let absDocxPath = resolveKey(docxKey);
+  
+  if (!absDocxPath || absDocxPath === null) {
+    // Redis storage - get file and write to temp location
+    logger.info({ docxKey }, 'Getting DOCX from Redis storage');
+    const docxBuffer = await getObject(docxKey);
+    
+    // Create temporary DOCX file
+    const tempDocxName = `${jobId || 'temp'}.docx`;
+    absDocxPath = path.join(tmpOutDir, tempDocxName);
+    await fs.writeFile(absDocxPath, docxBuffer);
+    
+    logger.info({ absDocxPath, size: docxBuffer.length }, 'DOCX file written to temp location');
+  } else {
+    // Local file storage - use existing path
+    logger.info({ absDocxPath }, 'Using local DOCX file');
+  }
 
   // Run LibreOffice conversion
   const cmd = `${SOFFICE_BIN} --headless --norestore --convert-to pdf --outdir "${tmpOutDir}" "${absDocxPath}"`;
