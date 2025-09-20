@@ -28,7 +28,7 @@
     "pino": "^9.9.0",
     "pizzip": "^3.2.0",
     "twilio": "^5.8.0",
-    "zod": "^4.0.17"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "docx": "^9.5.1"
