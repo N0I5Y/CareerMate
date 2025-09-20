@@ -181,10 +181,24 @@ for (const kind of Object.keys(artifactMap)) {
       const { jobId } = req.params;
       const found = await artifactMap[kind](jobId, req);
       if (!found) throw error('NotFound', `Artifact not found`, 404);
+      
+      // Handle both Redis storage and local file storage
       const abs = localPathFor(found.key);
+      
       res.setHeader('Content-Type', found.mime);
-      res.setHeader('Content-Disposition', `attachment; filename="${jobId}-${kind}${path.extname(abs)}"`);
-      res.sendFile(abs);
+      
+      if (abs && abs !== null) {
+        // Local file storage - use sendFile
+        res.setHeader('Content-Disposition', `attachment; filename="${jobId}-${kind}${path.extname(abs)}"`);
+        res.sendFile(abs);
+      } else {
+        // Redis storage - get file buffer and send directly
+        const fileExtension = path.extname(found.key) || `.${kind}`;
+        res.setHeader('Content-Disposition', `attachment; filename="${jobId}-${kind}${fileExtension}"`);
+        
+        const fileBuffer = await getObject(found.key);
+        res.send(fileBuffer);
+      }
     } catch (err) {
       next(err);
     }
