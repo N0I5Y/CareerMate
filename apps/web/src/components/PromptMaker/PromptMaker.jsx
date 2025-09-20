@@ -16,6 +16,7 @@ function PromptMakerContent() {
   const [promptToDelete, setPromptToDelete] = useState(null);
   const [notification, setNotification] = useState(null);
   const [editorMode, setEditorMode] = useState('simple'); // 'simple' or 'advanced'
+  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || '');
 
   const {
     prompts,
@@ -132,6 +133,35 @@ function PromptMakerContent() {
                 <span>Back to List</span>
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Admin Token Input */}
+        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <div className="flex-1">
+              <label htmlFor="adminToken" className="block text-sm font-medium text-yellow-800">
+                Admin Token (Required for creating/editing prompts)
+              </label>
+              <input
+                type="password"
+                id="adminToken"
+                value={adminToken}
+                onChange={(e) => {
+                  const token = e.target.value;
+                  setAdminToken(token);
+                  localStorage.setItem('adminToken', token);
+                }}
+                placeholder="Enter your admin token..."
+                className="mt-1 block w-full px-3 py-2 border border-yellow-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
+              />
+              <p className="mt-1 text-xs text-yellow-700">
+                This token is stored locally in your browser and required for prompt management operations.
+              </p>
+            </div>
           </div>
         </div>
 
