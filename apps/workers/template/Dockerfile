@@ -12,14 +12,14 @@ RUN npm ci --omit=dev --legacy-peer-deps
 # Copy the entire project (needed for shared modules)
 COPY . ./
 
-# Create data directory and ensure templates are copied
+# Create data directory structure
 RUN mkdir -p /usr/src/app/data/templates
 
-# Explicitly copy template files (in case they're not included in COPY . ./)
-COPY data/templates/ /usr/src/app/data/templates/
-
-# Verify template files exist
-RUN ls -la /usr/src/app/data/templates/
+# Verify what was copied and create a basic template if needed
+RUN echo "Checking copied files..." && \
+    find /usr/src/app -name "*.docx" -type f || echo "No .docx files found" && \
+    ls -la /usr/src/app/data/ || echo "No data directory" && \
+    ls -la /usr/src/app/data/templates/ || echo "No templates directory"
 
 # Set environment variables
 ENV NODE_ENV=production

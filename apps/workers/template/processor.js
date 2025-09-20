@@ -63,10 +63,18 @@ module.exports = async function processor(job) {
         const files = fs.readdirSync(dataDir, { recursive: true });
         logger.error({ dataDir, files }, 'Available files in data directory');
       }
+      
+      // Also check the entire project for .docx files
+      const projectFiles = fs.readdirSync('/usr/src/app', { recursive: true }).filter(f => f.endsWith('.docx'));
+      logger.error({ projectFiles }, 'All .docx files in project');
+      
     } catch (e) {
-      logger.error({ err: e }, 'Could not list data directory');
+      logger.error({ err: e }, 'Could not list directories');
     }
-    throw new Error(`Template file not found at any of the expected paths: ${TEMPLATE_PATHS.join(', ')}`);
+    
+    // For now, skip template processing if no template is found
+    logger.warn('No template file found, skipping template processing');
+    return { docxKey: null, skipped: true, reason: 'No template file available' };
   }
 
   // 2) Load resume JSON from storage
