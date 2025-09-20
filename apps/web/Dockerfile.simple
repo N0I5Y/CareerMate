@@ -7,11 +7,14 @@ COPY apps/web/public/ /usr/share/nginx/html/
 # Create health check file
 RUN echo "healthy" > /usr/share/nginx/html/health.txt
 
-# Copy nginx configuration template
-COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
 
-# Railway will set PORT environment variable
-ENV PORT=80
+# Copy our nginx configuration with fixed port
+COPY apps/web/nginx-fixed.conf /etc/nginx/conf.d/default.conf
 
-# Start nginx with envsubst for PORT variable
+# Test nginx configuration
+RUN nginx -t
+
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
