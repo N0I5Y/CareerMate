@@ -24,8 +24,11 @@ const TEMPLATE_PATH = process.env.TEMPLATE_PATH ||
 const TEMPLATE_PATHS = [
   TEMPLATE_PATH,
   '/usr/src/app/data/templates/resume.docx',
+  '/usr/src/app/assets/template.docx',  // Found in debugging output!
   path.resolve(__dirname, '../../../data/templates/resume.docx'),
+  path.resolve(__dirname, '../../../assets/template.docx'),
   path.resolve(process.cwd(), 'data/templates/resume.docx'),
+  path.resolve(process.cwd(), 'assets/template.docx'),
 ];
 
 module.exports = async function processor(job) {
@@ -37,20 +40,30 @@ module.exports = async function processor(job) {
 
   logger.info({ jobId, jsonKey, role, company, wantPdf }, 'Templater job started');
 
-  // 1) Load the DOCX template from disk - try multiple paths
+  // 1) Load the DOCX template - try Redis first, then local paths
   let templateBuf;
   let foundPath = null;
   
-  for (const templatePath of TEMPLATE_PATHS) {
-    try {
-      if (fs.existsSync(templatePath)) {
-        templateBuf = fs.readFileSync(templatePath);
-        foundPath = templatePath;
-        logger.info({ templatePath }, 'Template file found');
-        break;
+  // First try to get template from Redis storage (uploaded via API)
+  try {
+    templateBuf = await getObject('templates/resume.docx');
+    foundPath = 'Redis:templates/resume.docx';
+    logger.info({ foundPath }, 'Template loaded from Redis storage');
+  } catch (redisErr) {
+    logger.debug({ err: redisErr }, 'Template not found in Redis, trying local paths');
+    
+    // Fallback to local file system
+    for (const templatePath of TEMPLATE_PATHS) {
+      try {
+        if (fs.existsSync(templatePath)) {
+          templateBuf = fs.readFileSync(templatePath);
+          foundPath = templatePath;
+          logger.info({ templatePath }, 'Template file found on disk');
+          break;
+        }
+      } catch (err) {
+        logger.debug({ err, templatePath }, 'Template path failed');
       }
-    } catch (err) {
-      logger.debug({ err, templatePath }, 'Template path failed');
     }
   }
   

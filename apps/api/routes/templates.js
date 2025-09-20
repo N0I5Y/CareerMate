@@ -37,6 +37,14 @@ router.post('/', upload.single('file'), async (req, res, next) => {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     );
 
+    // Also store as the default template for workers to use
+    const defaultTemplateKey = 'templates/resume.docx';
+    await putObject(
+      defaultTemplateKey,
+      file.buffer,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+
     // Auto-generate preview unless explicitly disabled
     const doPreview = String(req.body.preview ?? 'true').toLowerCase() === 'true';
     let previewUrl = null;
@@ -49,7 +57,14 @@ router.post('/', upload.single('file'), async (req, res, next) => {
       previewUrl = `/api/templates/${templateId}/preview.pdf`;
     }
 
-    res.json({ ok: true, templateId, templateKey, previewUrl });
+    res.json({ 
+      ok: true, 
+      templateId, 
+      templateKey,
+      defaultTemplateKey,
+      previewUrl,
+      message: 'Template uploaded and set as default for resume processing'
+    });
   } catch (err) {
     next(err);
   }
@@ -64,7 +79,33 @@ router.get('/:templateId/preview.pdf', async (req, res, next) => {
       return next(Object.assign(new Error('Preview not ready'), { status: 404 }));
     }
     res.setHeader('Content-Type', 'application/pdf');
-    res.sendFile(localPathFor(key));
+    
+    // For Redis storage, we need to get the file and send it
+    const { getObject } = require('../lib/storage');
+    const fileBuffer = await getObject(key);
+    res.send(fileBuffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/templates - List available templates
+router.get('/', async (req, res, next) => {
+  try {
+    // For now, just return info about the default template
+    const defaultExists = await exists('templates/resume.docx');
+    
+    res.json({
+      templates: [
+        {
+          id: 'default',
+          name: 'Default Resume Template',
+          key: 'templates/resume.docx',
+          available: defaultExists
+        }
+      ],
+      message: 'Use POST /api/templates to upload a new template'
+    });
   } catch (err) {
     next(err);
   }

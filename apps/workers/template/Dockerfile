@@ -15,11 +15,23 @@ COPY . ./
 # Create data directory structure
 RUN mkdir -p /usr/src/app/data/templates
 
-# Verify what was copied and create a basic template if needed
-RUN echo "Checking copied files..." && \
-    find /usr/src/app -name "*.docx" -type f || echo "No .docx files found" && \
-    ls -la /usr/src/app/data/ || echo "No data directory" && \
-    ls -la /usr/src/app/data/templates/ || echo "No templates directory"
+# Copy template file from assets to the expected location
+RUN if [ -f "/usr/src/app/assets/template.docx" ]; then \
+        cp /usr/src/app/assets/template.docx /usr/src/app/data/templates/resume.docx && \
+        echo "✅ Template copied from assets/template.docx to data/templates/resume.docx"; \
+    elif [ -f "/usr/src/app/data/templates/resume.docx" ]; then \
+        echo "✅ Template already exists at data/templates/resume.docx"; \
+    else \
+        echo "⚠️ No template file found in assets/ or data/templates/"; \
+    fi
+
+# Verify template file exists
+RUN ls -la /usr/src/app/data/templates/ && \
+    if [ -f "/usr/src/app/data/templates/resume.docx" ]; then \
+        echo "✅ Template file ready: $(ls -lh /usr/src/app/data/templates/resume.docx)"; \
+    else \
+        echo "❌ Template file missing"; \
+    fi
 
 # Set environment variables
 ENV NODE_ENV=production
