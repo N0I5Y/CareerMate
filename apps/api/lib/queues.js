@@ -1,23 +1,51 @@
 const { Queue } = require('bullmq');
 const { URL } = require('url');
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const QUEUE_EXTRACT = process.env.QUEUE_EXTRACT || 'resume.extract';
 const QUEUE_CONVERT = process.env.QUEUE_CONVERT || 'resume.convert';
 
+console.log('Redis URL:', REDIS_URL ? 'Set (hidden for security)' : 'Not set');
+console.log('Queue Extract:', QUEUE_EXTRACT);
+console.log('Queue Convert:', QUEUE_CONVERT);
+
 function buildConnection(redisUrl) {
-  const u = new URL(redisUrl);
-  return {
-    host: u.hostname,
-    port: Number(u.port || 6379),
-    username: u.username || undefined,
-    password: u.password || undefined,
-    tls: u.protocol === 'rediss:' ? {} : undefined,
-  };
+  try {
+    const u = new URL(redisUrl);
+    const connection = {
+      host: u.hostname,
+      port: Number(u.port || 6379),
+      username: u.username || undefined,
+      password: u.password || undefined,
+      tls: u.protocol === 'rediss:' ? {} : undefined,
+    };
+    
+    console.log('Redis connection config:', {
+      host: connection.host,
+      port: connection.port,
+      hasUsername: !!connection.username,
+      hasPassword: !!connection.password,
+      hasTLS: !!connection.tls
+    });
+    
+    return connection;
+  } catch (error) {
+    console.error('Error parsing Redis URL:', error);
+    throw error;
+  }
 }
 
-const extractQ = new Queue(QUEUE_EXTRACT, { connection: buildConnection(REDIS_URL) });
-const convertQ = new Queue(QUEUE_CONVERT, { connection: buildConnection(REDIS_URL) });
+let extractQ, convertQ;
+
+try {
+  const redisConnection = buildConnection(REDIS_URL);
+  extractQ = new Queue(QUEUE_EXTRACT, { connection: redisConnection });
+  convertQ = new Queue(QUEUE_CONVERT, { connection: redisConnection });
+  console.log('Redis queues initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize Redis queues:', error);
+  throw error;
+}
 
 async function enqueueExtractJob(payload) {
   await extractQ.add(QUEUE_EXTRACT, payload, {
