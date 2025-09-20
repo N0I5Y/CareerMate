@@ -9,6 +9,10 @@ RUN npm ci
 # Copy the web app source
 COPY apps/web/ ./
 
+# Set build-time environment variables
+ARG VITE_API_BASE=https://careermate-production.up.railway.app
+ENV VITE_API_BASE=$VITE_API_BASE
+
 # Build the React app
 RUN npm run build
 
