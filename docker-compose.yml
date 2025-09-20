@@ -1,0 +1,149 @@
+version: "3.9"
+
+services:
+  careermate-web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:3000
+    container_name: careermate-web
+    ports:
+      - "8080:80"          # open the frontend at http://localhost:8080
+    depends_on:
+      - careermate-api
+    restart: unless-stopped
+
+  optimize-worker:
+    image: node:20-bookworm
+    container_name: careermate-optimize
+    working_dir: /usr/src/app
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      QUEUE_OPTIMIZE: ${QUEUE_OPTIMIZE:-resume.optimize}
+      QUEUE_TEMPLATE: ${QUEUE_TEMPLATE:-resume.template}
+      USE_S3: ${USE_S3:-false}
+      PROMPTS_DIR: /usr/src/app/data/prompts
+      LOCAL_DATA_DIR: /usr/src/app/data
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      NPM_CONFIG_LEGACY_PEER_DEPS: "true"
+    volumes:
+      - ./:/usr/src/app:rw
+      - node_modules:/usr/src/app/node_modules
+      - ./data:/usr/src/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "npm ci && node apps/workers/optimize/index.js"
+
+  redis:
+    image: redis:7-alpine
+    container_name: careermate-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  extract-worker:
+    image: node:20-bookworm
+    container_name: careermate-extract
+    working_dir: /usr/src/app
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      QUEUE_EXTRACT: ${QUEUE_EXTRACT:-resume.extract}
+      QUEUE_OPTIMIZE: ${QUEUE_OPTIMIZE:-resume.optimize}
+      USE_S3: ${USE_S3:-false}
+      LOCAL_DATA_DIR: /usr/src/app/data
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NPM_CONFIG_LEGACY_PEER_DEPS: "true"
+    volumes:
+      - ./:/usr/src/app:rw
+      - node_modules:/usr/src/app/node_modules
+      - ./data:/usr/src/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "npm ci && node apps/workers/extract/index.js"
+
+  template-worker:
+    image: node:20-bookworm
+    container_name: careermate-template
+    working_dir: /usr/src/app
+    env_file: [.env]
+    environment:
+      REDIS_URL: redis://redis:6379
+      QUEUE_TEMPLATE: ${QUEUE_TEMPLATE:-resume.template}
+      QUEUE_CONVERT: ${QUEUE_CONVERT:-resume.convert}
+      USE_S3: ${USE_S3:-false}
+      LOCAL_DATA_DIR: /usr/src/app/data
+      TEMPLATE_PATH: /usr/src/app/data/templates/resume.docx
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NPM_CONFIG_LEGACY_PEER_DEPS: "true"
+    volumes:
+      - ./:/usr/src/app:rw
+      - node_modules:/usr/src/app/node_modules
+      - ./data:/usr/src/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "npm ci && node apps/workers/template/index.js"
+
+  convert-worker:
+    image: node:20-bookworm
+    container_name: careermate-convert
+    working_dir: /usr/src/app
+    env_file: [.env]
+    environment:
+      REDIS_URL: redis://redis:6379
+      QUEUE_CONVERT: ${QUEUE_CONVERT:-resume.convert}
+      USE_S3: ${USE_S3:-false}
+      LOCAL_DATA_DIR: /usr/src/app/data
+      SOFFICE_BIN: /usr/bin/soffice
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NPM_CONFIG_LEGACY_PEER_DEPS: "true"
+    volumes:
+      - ./:/usr/src/app:rw
+      - node_modules:/usr/src/app/node_modules
+      - ./data:/usr/src/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "apt-get update && apt-get install -y libreoffice && npm ci && node apps/workers/convert/index.js"
+
+  careermate-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - QUEUE_EXTRACT=resume.extract
+      - DATA_DIR=/usr/src/app/data
+      - ALLOW_ORIGIN=*
+      - LOG_LEVEL=info
+      - ALLOW_PROMPT_WRITE=true
+      - PROMPT_WRITE_TOKEN=supersecrettoken
+      - PROMPTS_DIR=/data/prompts
+    volumes:
+      - ./data:/usr/src/app/data
+    depends_on:
+      - redis
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+volumes:
+  node_modules:

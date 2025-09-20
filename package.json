@@ -1,0 +1,36 @@
+{
+  "name": "careermate-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.873.0",
+    "@supabase/supabase-js": "^2.53.0",
+    "bullmq": "^5.58.0",
+    "docxtemplater": "^3.65.3",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "fast-xml-parser": "^5.2.5",
+    "formdata-node": "^6.0.3",
+    "mammoth": "^1.10.0",
+    "mime-types": "^3.0.1",
+    "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "openai": "^5.15.0",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^5.4.54",
+    "pino": "^9.9.0",
+    "pizzip": "^3.2.0",
+    "twilio": "^5.8.0",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "docx": "^9.5.1"
+  }
+}
