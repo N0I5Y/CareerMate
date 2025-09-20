@@ -26,8 +26,8 @@ RUN mkdir -p /usr/src/app/data
 ENV NODE_ENV=production
 ENV SOFFICE_BIN=/usr/bin/soffice
 
-# Expose port (Railway will set PORT env var)
-EXPOSE $PORT
+# Expose port (Railway will set PORT env var dynamically)
+EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
