@@ -34,15 +34,17 @@ RUN ls -la /usr/share/nginx/html/
 # Create a simple health check file
 RUN echo "healthy" > /usr/share/nginx/html/health.txt
 
-# Copy nginx configuration
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy nginx configuration optimized for React SPA
+COPY apps/web/nginx-react.conf /etc/nginx/conf.d/default.conf
 
 # Test nginx configuration
 RUN nginx -t
 
-# Railway uses PORT environment variable
-ENV PORT=80
-EXPOSE $PORT
+# Expose port 8080
+EXPOSE 8080
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
