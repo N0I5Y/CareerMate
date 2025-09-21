@@ -6,6 +6,9 @@ const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
     focus: 'general', // general, technical, creative, sales, etc.
     tone: 'professional', // professional, friendly, confident, etc.
     emphasis: 'achievements', // achievements, skills, experience, etc.
+    atsOptimization: 'standard', // standard, aggressive, minimal
+    formattingStyle: 'concise', // concise, detailed, bullet-heavy
+    qualityFocus: 'impact', // impact, skills, experience
     customInstructions: '',
     model: 'gpt-4o-mini',
     temperature: 0.2
@@ -39,6 +42,25 @@ const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
     { value: 'innovation', label: 'Innovation', description: 'Focus on creative problem-solving and new ideas' }
   ];
 
+  const atsOptimizationOptions = [
+    { value: 'minimal', label: 'Minimal ATS', description: 'Basic keyword matching, human-readable focus' },
+    { value: 'standard', label: 'Standard ATS', description: 'Balanced approach with good keyword coverage' },
+    { value: 'aggressive', label: 'Aggressive ATS', description: 'Maximum keyword density and ATS compatibility' }
+  ];
+
+  const formattingStyleOptions = [
+    { value: 'concise', label: 'Concise', description: 'Short, punchy bullet points (10-12 words)' },
+    { value: 'detailed', label: 'Detailed', description: 'More comprehensive descriptions (12-15 words)' },
+    { value: 'bullet-heavy', label: 'Bullet-Heavy', description: 'Maximum bullet points per role' }
+  ];
+
+  const qualityFocusOptions = [
+    { value: 'impact', label: 'Impact-Focused', description: 'Emphasize measurable results and outcomes' },
+    { value: 'skills', label: 'Skills-Focused', description: 'Highlight technical competencies and expertise' },
+    { value: 'experience', label: 'Experience-Focused', description: 'Showcase depth and breadth of experience' },
+    { value: 'growth', label: 'Growth-Focused', description: 'Demonstrate career progression and development' }
+  ];
+
   const generateInstructions = () => {
     const focusInstructions = {
       general: "Optimize the resume for general job applications with broad appeal.",
@@ -65,34 +87,74 @@ const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
       innovation: "Emphasize creative solutions, process improvements, and innovative approaches."
     };
 
-    let instructions = `You are optimizing a resume with the following guidelines:
+    const atsInstructions = {
+      minimal: "Use natural language with basic keyword inclusion. Prioritize readability over keyword density.",
+      standard: "Balance keyword optimization with natural language. Include key terms 2-3 times throughout.",
+      aggressive: "Maximize keyword density while maintaining readability. Use variations and synonyms of key terms."
+    };
 
-FOCUS: ${focusInstructions[formData.focus]}
+    const formattingInstructions = {
+      concise: "Keep bullet points to 10-12 words maximum. Focus on the most impactful information only.",
+      detailed: "Use 12-15 words per bullet point. Provide more context and comprehensive descriptions.",
+      'bullet-heavy': "Maximize the number of bullet points per role (4-6 bullets). Cover all significant responsibilities and achievements."
+    };
 
-TONE: ${toneInstructions[formData.tone]}
+    const qualityInstructions = {
+      impact: "Every bullet point must include quantifiable results, metrics, or measurable outcomes.",
+      skills: "Emphasize technical competencies, certifications, and skill-based achievements throughout.",
+      experience: "Showcase depth of experience, variety of roles, and comprehensive background.",
+      growth: "Highlight career progression, promotions, increased responsibilities, and professional development."
+    };
 
-EMPHASIS: ${emphasisInstructions[formData.emphasis]}
+    let instructions = `You are a world-class resume optimizer. Transform the provided resume to maximize its effectiveness for the target role.
 
-FORMATTING RULES:
-- Keep bullet points under 15 words
-- Start each bullet with a strong action verb
-- Include numbers and percentages when possible
-- Use present tense for current roles, past tense for previous roles
-- Ensure the summary is under 35 words
+BASE RULES:
+- Output ONLY valid JSON with keys: name, contact:{email,phone}, summary, experience:[{title,company,dates,bullets[]}], education:[{degree,school,dates}], skills[]
+- Be factual and don't exaggerate or invent information
+- Don't add skills or experience not present in the original resume
+- Maintain professional integrity and accuracy
 
-ATS OPTIMIZATION:
+STYLE & TONE:
+${toneInstructions[formData.tone]}
+${focusInstructions[formData.focus]}
+
+EMPHASIS STRATEGY:
+${emphasisInstructions[formData.emphasis]}
+
+ATS/JD ALIGNMENT LEVEL (${formData.atsOptimization.toUpperCase()}):
+${atsInstructions[formData.atsOptimization]}
 - Match keywords from the job description when the candidate has that experience
 - Use exact terms from the job posting when applicable
-- Don't add skills or experience not present in the original resume
+- Incorporate industry-standard terminology and buzzwords
+- Ensure skills section aligns with job requirements
 
-QUALITY STANDARDS:
-- Be factual and don't exaggerate
-- Maintain professional language
-- Ensure consistency in formatting
-- Focus on impact and results`;
+FORMATTING RULES (${formData.formattingStyle.toUpperCase()} STYLE):
+${formattingInstructions[formData.formattingStyle]}
+- Start each bullet with a strong action verb (Led, Developed, Implemented, Achieved, etc.)
+- Use present tense for current roles, past tense for previous roles
+- Include numbers, percentages, and quantifiable metrics whenever possible
+- Ensure the professional summary is concise (under 35 words)
+- Use consistent formatting and parallel structure
+- Avoid personal pronouns (I, me, my)
+
+ATS OPTIMIZATION TECHNICAL REQUIREMENTS:
+- Use standard section headers (Experience, Education, Skills)
+- Include both acronyms and full terms (e.g., "AI (Artificial Intelligence)")
+- Use simple, clean formatting without complex layouts
+- Include relevant keywords naturally throughout the content
+- Ensure contact information is clearly formatted
+- Use standard date formats (MM/YYYY or Month YYYY)
+
+QUALITY STANDARDS (${formData.qualityFocus.toUpperCase()} FOCUS):
+${qualityInstructions[formData.qualityFocus]}
+- Ensure consistency in formatting and style
+- Focus on results and outcomes, not just responsibilities
+- Use industry-appropriate language and terminology
+- Maintain logical flow and organization
+- Show progression and growth in career trajectory`;
 
     if (formData.customInstructions.trim()) {
-      instructions += `\n\nADDITIONAL INSTRUCTIONS:\n${formData.customInstructions.trim()}`;
+      instructions += `\n\nADDITIONAL CUSTOM REQUIREMENTS:\n${formData.customInstructions.trim()}`;
     }
 
     return instructions;
@@ -261,10 +323,97 @@ QUALITY STANDARDS:
           </div>
         </div>
 
+        {/* ATS Optimization Level */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            ATS Optimization Level
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {atsOptimizationOptions.map((option) => (
+              <label key={option.value} className="relative">
+                <input
+                  type="radio"
+                  name="atsOptimization"
+                  value={option.value}
+                  checked={formData.atsOptimization === option.value}
+                  onChange={(e) => handleInputChange('atsOptimization', e.target.value)}
+                  className="sr-only"
+                />
+                <div className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                  formData.atsOptimization === option.value
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}>
+                  <div className="font-medium text-sm">{option.label}</div>
+                  <div className="text-xs text-gray-600 mt-1">{option.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Formatting Style */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Formatting Style
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {formattingStyleOptions.map((option) => (
+              <label key={option.value} className="relative">
+                <input
+                  type="radio"
+                  name="formattingStyle"
+                  value={option.value}
+                  checked={formData.formattingStyle === option.value}
+                  onChange={(e) => handleInputChange('formattingStyle', e.target.value)}
+                  className="sr-only"
+                />
+                <div className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                  formData.formattingStyle === option.value
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}>
+                  <div className="font-medium text-sm">{option.label}</div>
+                  <div className="text-xs text-gray-600 mt-1">{option.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Quality Focus */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Quality Standards Focus
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {qualityFocusOptions.map((option) => (
+              <label key={option.value} className="relative">
+                <input
+                  type="radio"
+                  name="qualityFocus"
+                  value={option.value}
+                  checked={formData.qualityFocus === option.value}
+                  onChange={(e) => handleInputChange('qualityFocus', e.target.value)}
+                  className="sr-only"
+                />
+                <div className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                  formData.qualityFocus === option.value
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}>
+                  <div className="font-medium text-sm">{option.label}</div>
+                  <div className="text-xs text-gray-600 mt-1">{option.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Custom Instructions */}
         <div>
           <label htmlFor="customInstructions" className="block text-sm font-medium text-gray-700 mb-2">
-            Additional Instructions (Optional)
+            Additional Custom Instructions (Optional)
           </label>
           <textarea
             id="customInstructions"
@@ -272,10 +421,10 @@ QUALITY STANDARDS:
             value={formData.customInstructions}
             onChange={(e) => handleInputChange('customInstructions', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Add any specific requirements or preferences..."
+            placeholder="Add any specific requirements, industry-specific needs, or special formatting requests..."
           />
           <p className="mt-1 text-sm text-gray-500">
-            Add any specific instructions or requirements for this prompt
+            Add any specific instructions, industry requirements, or special formatting needs
           </p>
         </div>
 
