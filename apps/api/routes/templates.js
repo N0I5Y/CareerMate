@@ -34,15 +34,17 @@ router.post('/', upload.single('file'), async (req, res, next) => {
     await putObject(
       templateKey,
       file.buffer,
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      { persistent: true }
     );
 
-    // Also store as the default template for workers to use
+    // Also store as the default template for workers to use (persistent storage)
     const defaultTemplateKey = 'templates/resume.docx';
     await putObject(
       defaultTemplateKey,
       file.buffer,
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      { persistent: true }
     );
 
     // Auto-generate preview unless explicitly disabled

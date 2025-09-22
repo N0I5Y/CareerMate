@@ -32,7 +32,7 @@ function buildConnection(redisUrl) {
 const redis = new Redis(buildConnection(REDIS_URL));
 
 /**
- * Store file in Redis with expiration (1 hour default)
+ * Store file in Redis with optional expiration (1 hour default, null for no expiration)
  */
 async function putFileInRedis(key, buffer, contentType, expirationSeconds = 3600) {
   const fileData = {
@@ -42,8 +42,18 @@ async function putFileInRedis(key, buffer, contentType, expirationSeconds = 3600
     size: buffer.length
   };
   
-  await redis.setex(`file:${key}`, expirationSeconds, JSON.stringify(fileData));
-  console.log(`Stored file in Redis: ${key} (${buffer.length} bytes)`);
+  const redisKey = `file:${key}`;
+  
+  if (expirationSeconds === null) {
+    // No expiration - persistent storage
+    await redis.set(redisKey, JSON.stringify(fileData));
+    console.log(`Stored file in Redis (persistent): ${key} (${buffer.length} bytes)`);
+  } else {
+    // With expiration
+    await redis.setex(redisKey, expirationSeconds, JSON.stringify(fileData));
+    console.log(`Stored file in Redis (${expirationSeconds}s TTL): ${key} (${buffer.length} bytes)`);
+  }
+  
   return { key, bytes: buffer.length };
 }
 
@@ -73,10 +83,17 @@ async function fileExistsInRedis(key) {
 }
 
 // Main storage interface
-async function putObject(key, buffer, contentType) {
+async function putObject(key, buffer, contentType, options = {}) {
   if (USE_REDIS_STORAGE) {
     console.log(`Using Redis storage for: ${key}`);
-    return await putFileInRedis(key, buffer, contentType);
+    
+    // For templates, use longer expiration (30 days) or no expiration
+    let expiration = 3600; // default 1 hour
+    if (key.startsWith('templates/')) {
+      expiration = options.persistent ? null : (30 * 24 * 3600); // 30 days for templates
+    }
+    
+    return await putFileInRedis(key, buffer, contentType, expiration);
   } else {
     // Store locally (for development)
     const abs = path.join(DATA_DIR, key);
