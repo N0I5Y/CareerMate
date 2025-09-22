@@ -120,11 +120,11 @@ DATA HYGIENE
 
     // Use custom instructions if provided, otherwise use base rules
     const system = customInstructions ? \`
-OUTPUT
-- Return JSON ONLY, matching EXACTLY this schema (no extra keys, no comments):
-\${schema}
-
 \${customInstructions}
+
+JSON SCHEMA REQUIREMENT:
+Return JSON ONLY, matching EXACTLY this schema (no extra keys, no comments):
+\${schema}
 \` : baseRules;
 
     const user = \`
