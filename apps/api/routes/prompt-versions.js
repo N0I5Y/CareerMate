@@ -120,8 +120,6 @@ DATA HYGIENE
 
     // Use custom instructions if provided, otherwise use base rules
     const system = customInstructions ? \`
-You are a world-class resume optimizer.
-
 OUTPUT
 - Return JSON ONLY, matching EXACTLY this schema (no extra keys, no comments):
 \${schema}
