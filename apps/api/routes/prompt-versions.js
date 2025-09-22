@@ -143,8 +143,8 @@ JD Summary (prioritize wording; do NOT invent facts):
 };
 `.trimStart();
 }
-// --
---- READ (list) — ALWAYS ALLOWED -----
+
+// ----- READ (list) — ALWAYS ALLOWED -----
 router.get('/', async (req, res, next) => {
   try {
     const items = await discoverPrompts();
