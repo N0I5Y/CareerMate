@@ -164,7 +164,7 @@ module.exports = async function processor(job) {
   } = job.data || {};
 
   const promptName = prompt || process.env.OPT_PROMPT || 'v1';
-  const P = getPrompt(promptName);
+  const P = await getPrompt(promptName);
   const logger = makeLogger({ jobId, prompt: promptName });
 
   if (!textKey) throw new Error('Missing textKey in job payload');
