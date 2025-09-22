@@ -94,9 +94,9 @@ const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
     };
 
     const formattingInstructions = {
-      concise: "Keep bullet points to 10-12 words maximum. Focus on the most impactful information only.",
-      detailed: "Use 12-15 words per bullet point. Provide more context and comprehensive descriptions.",
-      'bullet-heavy': "Maximize the number of bullet points per role (4-6 bullets). Cover all significant responsibilities and achievements."
+      concise: "Keep bullet points to 10-12 words maximum. Professional summary under 30 words. Focus on the most impactful information only.",
+      detailed: "Use 12-15 words per bullet point. Professional summary under 40 words. Provide more context and comprehensive descriptions.",
+      'bullet-heavy': "Use 10-15 words per bullet point. Professional summary under 35 words. Maximize the number of bullet points per role (4-6 bullets). Cover all significant responsibilities and achievements."
     };
 
     const qualityInstructions = {
@@ -133,7 +133,6 @@ ${formattingInstructions[formData.formattingStyle]}
 - Start each bullet with a strong action verb (Led, Developed, Implemented, Achieved, etc.)
 - Use present tense for current roles, past tense for previous roles
 - Include numbers, percentages, and quantifiable metrics whenever possible
-- Ensure the professional summary is concise (under 35 words)
 - Use consistent formatting and parallel structure
 - Avoid personal pronouns (I, me, my)
 
