@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npx prisma generate",
-    "postinstall": "npx prisma generate",
+    "postinstall": "echo 'Install complete'",
     "start": "node apps/api/index.js",
     "dev": "node apps/api/index.js",
     "deploy:railway": "node scripts/deploy-railway.js",
@@ -23,6 +23,7 @@
     "@prisma/client": "^6.16.2",
     "@supabase/supabase-js": "^2.53.0",
     "bullmq": "^5.58.0",
+    "cors": "^2.8.5",
     "docxtemplater": "^3.65.3",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
@@ -37,11 +38,11 @@
     "pdfjs-dist": "^5.4.54",
     "pino": "^9.9.0",
     "pizzip": "^3.2.0",
+    "prisma": "^6.16.2",
     "twilio": "^5.8.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "docx": "^9.5.1",
-    "prisma": "^6.16.2"
+    "docx": "^9.5.1"
   }
 }
