@@ -14,8 +14,12 @@ RUN npm config set cache /tmp/.npm --global
 
 # Copy package files and Prisma schema first (for better caching)
 COPY apps/api/package*.json ./
-COPY apps/api/.npmrc ./
 COPY prisma ./prisma/
+
+# Create .npmrc with the settings we need
+RUN echo "legacy-peer-deps=true" > .npmrc && \
+    echo "audit=false" >> .npmrc && \
+    echo "fund=false" >> .npmrc
 
 # Clear npm cache and install dependencies with better error handling
 RUN npm cache clean --force && \

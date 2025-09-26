@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npm ci && npx prisma generate",
+    "build": "echo 'Dependencies already installed by Dockerfile' && npx prisma generate",
     "postinstall": "echo 'Postinstall completed'",
     "start": "node apps/api/index.js",
     "dev": "node apps/api/index.js",
