@@ -15,35 +15,62 @@ const extractBaseRulesFromCode = (code) => {
 };
 
 const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
-  const [formData, setFormData] = useState({
-    name: initialData?.label || '',
-    focus: 'general', // general, technical, creative, sales, etc.
-    tone: 'professional', // professional, friendly, confident, etc.
-    emphasis: 'achievements', // achievements, skills, experience, etc.
-    atsOptimization: 'standard', // standard, aggressive, minimal
-    formattingStyle: 'concise', // concise, detailed, bullet-heavy
-    qualityFocus: 'impact', // impact, skills, experience
-    customInstructions: '',
-    completeBaseRules: mode === 'edit' ? extractBaseRulesFromCode(initialData?.code) : '', // Complete base rules override
-    model: 'gpt-4o-mini',
-    temperature: 0.2
-  });
+  // Initialize form data with metadata if available (for edit mode)
+  const initializeFormData = () => {
+    const metadata = initialData?.metadata;
+    const formConfig = metadata?.formConfig;
+    
+    return {
+      name: initialData?.label || '',
+      focus: formConfig?.focus || 'general',
+      tone: formConfig?.tone || 'professional',
+      emphasis: formConfig?.emphasis || 'achievements',
+      atsOptimization: formConfig?.atsOptimization || 'standard',
+      formattingStyle: formConfig?.formattingStyle || 'concise',
+      qualityFocus: formConfig?.qualityFocus || 'impact',
+      customInstructions: formConfig?.customInstructions || '',
+      completeBaseRules: mode === 'edit' ? extractBaseRulesFromCode(initialData?.code) : '',
+      model: metadata?.model || 'gpt-4o-mini',
+      temperature: metadata?.temperature || 0.2
+    };
+  };
+
+  const [formData, setFormData] = useState(initializeFormData());
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update form data when initialData changes (for async loading)
   useEffect(() => {
-    if (mode === 'edit' && initialData?.code) {
+    if (mode === 'edit' && initialData) {
+      const metadata = initialData.metadata;
+      const formConfig = metadata?.formConfig;
       const extractedRules = extractBaseRulesFromCode(initialData.code);
-      if (extractedRules && extractedRules !== formData.completeBaseRules) {
-        setFormData(prev => ({
-          ...prev,
+      
+      setFormData(prev => ({
+        ...prev,
+        // Update form selections from metadata if available
+        ...(formConfig && {
+          focus: formConfig.focus || prev.focus,
+          tone: formConfig.tone || prev.tone,
+          emphasis: formConfig.emphasis || prev.emphasis,
+          atsOptimization: formConfig.atsOptimization || prev.atsOptimization,
+          formattingStyle: formConfig.formattingStyle || prev.formattingStyle,
+          qualityFocus: formConfig.qualityFocus || prev.qualityFocus,
+          customInstructions: formConfig.customInstructions || prev.customInstructions,
+        }),
+        // Update model and temperature from metadata
+        ...(metadata && {
+          model: metadata.model || prev.model,
+          temperature: metadata.temperature || prev.temperature,
+        }),
+        // Update base rules from code
+        ...(extractedRules && {
           completeBaseRules: extractedRules
-        }));
-      }
+        })
+      }));
     }
-  }, [initialData?.code, mode]);
+  }, [initialData, mode]);
 
   const focusOptions = [
     { value: 'general', label: 'General Purpose', description: 'Works well for most job types' },
@@ -211,10 +238,23 @@ DATA HYGIENE:
     setIsSubmitting(true);
     
     try {
+      // Prepare form metadata for storage
+      const formConfig = {
+        focus: formData.focus,
+        tone: formData.tone,
+        emphasis: formData.emphasis,
+        atsOptimization: formData.atsOptimization,
+        formattingStyle: formData.formattingStyle,
+        qualityFocus: formData.qualityFocus,
+        customInstructions: formData.customInstructions
+      };
+
       const submitData = {
         baseRules: generateInstructions(),
+        formConfig, // Include form metadata
         model: formData.model,
-        temperature: formData.temperature
+        temperature: formData.temperature,
+        description: `${formData.focus} prompt with ${formData.tone} tone, emphasizing ${formData.emphasis}`
       };
 
       if (mode === 'create' && formData.name.trim()) {

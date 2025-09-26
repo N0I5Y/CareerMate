@@ -7,6 +7,10 @@
     "start": "node apps/api/index.js",
     "dev": "node apps/api/index.js",
     "deploy:railway": "node scripts/deploy-railway.js",
+    "migrate:prompts": "node scripts/migrate-prompts.js",
+    "db:migrate": "npx prisma migrate deploy",
+    "db:generate": "npx prisma generate",
+    "db:studio": "npx prisma studio",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
