@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
+const promptService = require('../services/promptService');
 
 const router = express.Router();
 
@@ -147,10 +148,33 @@ JD Summary (prioritize wording; do NOT invent facts):
 // ----- READ (list) — ALWAYS ALLOWED -----
 router.get('/', async (req, res, next) => {
   try {
-    const items = await discoverPrompts();
-    res.json({ items });
+    // Try database first
+    const dbPrompts = await promptService.getAllPrompts();
+    
+    // Convert to legacy format for backwards compatibility
+    const items = dbPrompts.map(prompt => ({
+      label: prompt.name,
+      source: prompt.isBuiltin ? 'builtin' : 'custom',
+      path: `/database/prompts/${prompt.name}` // Virtual path for database prompts
+    }));
+
+    // Also include file-based prompts for backwards compatibility
+    const filePrompts = await discoverPrompts();
+    
+    // Merge, avoiding duplicates (database takes precedence)
+    const existingNames = new Set(items.map(item => item.label));
+    const uniqueFilePrompts = filePrompts.filter(fp => !existingNames.has(fp.label));
+    
+    res.json({ items: [...items, ...uniqueFilePrompts] });
   } catch (err) {
-    next(err);
+    console.error('Error listing prompts:', err);
+    // Fallback to file-based discovery
+    try {
+      const items = await discoverPrompts();
+      res.json({ items });
+    } catch (fallbackErr) {
+      next(fallbackErr);
+    }
   }
 });
 
@@ -158,6 +182,30 @@ router.get('/', async (req, res, next) => {
 router.get('/:label', async (req, res, next) => {
   try {
     const label = sanitizeName(req.params.label);
+    
+    // Try database first
+    try {
+      const prompt = await promptService.getPromptByName(label);
+      const code = promptService.generateModuleCode(prompt);
+      return res.json({ 
+        label: prompt.name, 
+        path: `/database/prompts/${prompt.name}`, 
+        code,
+        metadata: {
+          id: prompt.id,
+          formConfig: prompt.formConfig,
+          description: prompt.description,
+          isBuiltin: prompt.isBuiltin,
+          version: prompt.version,
+          createdAt: prompt.createdAt,
+          usageCount: prompt.usageCount
+        }
+      });
+    } catch (dbErr) {
+      console.log(`Prompt "${label}" not found in database, trying files...`);
+    }
+
+    // Fallback to file-based lookup
     const candidates = [
       path.join(CUSTOM_DIR, `${label}.js`),
       path.join(BUILTIN_DIR, `${label}.js`),
@@ -168,6 +216,7 @@ router.get('/:label', async (req, res, next) => {
         return res.json({ label, path: p, code });
       }
     }
+    
     return res.status(404).json({ error: 'Not found' });
   } catch (err) {
     next(err);
@@ -184,29 +233,74 @@ function requireWrite(req, res, next) {
 // ----- CREATE -----
 router.post('/', requireWrite, express.json({ limit: '300kb' }), async (req, res, next) => {
   try {
-    const { baseRules, name, model = 'gpt-4o-mini', temperature = 0.2, force = false } = req.body || {};
+    const { 
+      baseRules, 
+      name, 
+      model = 'gpt-4o-mini', 
+      temperature = 0.2, 
+      force = false,
+      formConfig,
+      description 
+    } = req.body || {};
+    
     if (!baseRules || !String(baseRules).trim()) {
       return res.status(400).json({ error: 'baseRules (plain text) is required' });
     }
-    await ensureDir(CUSTOM_DIR);
-    const ver = name ? sanitizeName(name) : await nextVersionName();
-    const file = path.join(CUSTOM_DIR, `${ver}.js`);
-    if (fs.existsSync(file) && !force) {
-      return res.status(409).json({ error: 'version already exists', prompt: ver });
-    }
-    const code = buildModuleCode({ name: ver, model, temperature: Number(temperature), baseRules: String(baseRules) });
-    await fsp.writeFile(file, code, 'utf8');
 
-    // sanity load (current process only)
+    const promptName = name ? sanitizeName(name) : await nextVersionName();
+    
     try {
-      delete require.cache[require.resolve(file)];
-      const mod = require(file); // eslint-disable-line
-      if (typeof mod?.buildMessages !== 'function') throw new Error('buildMessages missing');
-    } catch (e) {
-      return res.status(500).json({ error: `wrote ${ver} but failed to load: ${e.message}` });
-    }
+      // Try to create in database first
+      const prompt = await promptService.createPrompt({
+        name: promptName,
+        baseRules: String(baseRules),
+        formConfig,
+        model,
+        temperature: Number(temperature),
+        description,
+        createdBy: 'api' // Could be enhanced with user authentication
+      });
 
-    res.status(201).json({ ok: true, prompt: ver, path: file });
+      res.status(201).json({ 
+        ok: true, 
+        prompt: promptName, 
+        path: `/database/prompts/${promptName}`,
+        id: prompt.id
+      });
+    } catch (dbErr) {
+      if (dbErr.message.includes('already exists') && !force) {
+        return res.status(409).json({ error: 'version already exists', prompt: promptName });
+      }
+
+      console.warn('Database creation failed, falling back to file system:', dbErr.message);
+      
+      // Fallback to file-based creation
+      await ensureDir(CUSTOM_DIR);
+      const file = path.join(CUSTOM_DIR, `${promptName}.js`);
+      if (fs.existsSync(file) && !force) {
+        return res.status(409).json({ error: 'version already exists', prompt: promptName });
+      }
+      
+      const code = buildModuleCode({ 
+        name: promptName, 
+        model, 
+        temperature: Number(temperature), 
+        baseRules: String(baseRules),
+        formMetadata: formConfig
+      });
+      await fsp.writeFile(file, code, 'utf8');
+
+      // sanity load (current process only)
+      try {
+        delete require.cache[require.resolve(file)];
+        const mod = require(file); // eslint-disable-line
+        if (typeof mod?.buildMessages !== 'function') throw new Error('buildMessages missing');
+      } catch (e) {
+        return res.status(500).json({ error: `wrote ${promptName} but failed to load: ${e.message}` });
+      }
+
+      res.status(201).json({ ok: true, prompt: promptName, path: file });
+    }
   } catch (err) {
     next(err);
   }
@@ -216,26 +310,68 @@ router.post('/', requireWrite, express.json({ limit: '300kb' }), async (req, res
 router.put('/:label', requireWrite, express.json({ limit: '300kb' }), async (req, res, next) => {
   try {
     const label = sanitizeName(req.params.label);
-    const file = path.join(CUSTOM_DIR, `${label}.js`);
-    if (!fs.existsSync(file)) return res.status(404).json({ error: 'Not found (only custom prompts are editable)' });
-
-    const { baseRules, model = 'gpt-4o-mini', temperature = 0.2 } = req.body || {};
+    const { 
+      baseRules, 
+      model = 'gpt-4o-mini', 
+      temperature = 0.2,
+      formConfig,
+      description,
+      changeNotes
+    } = req.body || {};
+    
     if (!baseRules || !String(baseRules).trim()) {
       return res.status(400).json({ error: 'baseRules (plain text) is required' });
     }
-    const code = buildModuleCode({ name: label, model, temperature: Number(temperature), baseRules: String(baseRules) });
-    await fsp.writeFile(file, code, 'utf8');
 
-    // sanity load
     try {
-      delete require.cache[require.resolve(file)];
-      const mod = require(file); // eslint-disable-line
-      if (typeof mod?.buildMessages !== 'function') throw new Error('buildMessages missing');
-    } catch (e) {
-      return res.status(500).json({ error: `updated ${label} but failed to load: ${e.message}` });
-    }
+      // Try to update in database first
+      const prompt = await promptService.updatePrompt(label, {
+        baseRules: String(baseRules),
+        formConfig,
+        model,
+        temperature: Number(temperature),
+        description,
+        changeNotes,
+        createdBy: 'api' // Could be enhanced with user authentication
+      });
 
-    res.json({ ok: true, prompt: label, path: file });
+      res.json({ 
+        ok: true, 
+        prompt: label, 
+        path: `/database/prompts/${label}`,
+        version: prompt.version
+      });
+    } catch (dbErr) {
+      if (dbErr.message.includes('not found')) {
+        // Try file-based update as fallback
+        const file = path.join(CUSTOM_DIR, `${label}.js`);
+        if (!fs.existsSync(file)) {
+          return res.status(404).json({ error: 'Not found (only custom prompts are editable)' });
+        }
+
+        const code = buildModuleCode({ 
+          name: label, 
+          model, 
+          temperature: Number(temperature), 
+          baseRules: String(baseRules),
+          formMetadata: formConfig
+        });
+        await fsp.writeFile(file, code, 'utf8');
+
+        // sanity load
+        try {
+          delete require.cache[require.resolve(file)];
+          const mod = require(file); // eslint-disable-line
+          if (typeof mod?.buildMessages !== 'function') throw new Error('buildMessages missing');
+        } catch (e) {
+          return res.status(500).json({ error: `updated ${label} but failed to load: ${e.message}` });
+        }
+
+        res.json({ ok: true, prompt: label, path: file });
+      } else {
+        throw dbErr;
+      }
+    }
   } catch (err) {
     next(err);
   }
@@ -245,29 +381,43 @@ router.put('/:label', requireWrite, express.json({ limit: '300kb' }), async (req
 router.delete('/:label', requireWrite, async (req, res, next) => {
   try {
     const label = sanitizeName(req.params.label);
-    const file = path.join(CUSTOM_DIR, `${label}.js`);
     
-    if (!fs.existsSync(file)) {
-      return res.status(404).json({ error: 'Not found (only custom prompts can be deleted)' });
-    }
-
-    // Check if it's a builtin prompt (exists in builtin directory)
-    const builtinFile = path.join(BUILTIN_DIR, `${label}.js`);
-    if (fs.existsSync(builtinFile) && !fs.existsSync(file)) {
-      return res.status(403).json({ error: 'Cannot delete builtin prompts' });
-    }
-
-    // Delete the file
-    await fsp.unlink(file);
-
-    // Clear from require cache
     try {
-      delete require.cache[require.resolve(file)];
-    } catch (e) {
-      // File might not be in cache, ignore
-    }
+      // Try to delete from database first
+      const result = await promptService.deletePrompt(label);
+      res.json({ ok: true, prompt: label, deleted: true, message: result.message });
+    } catch (dbErr) {
+      if (dbErr.message.includes('not found')) {
+        // Try file-based deletion as fallback
+        const file = path.join(CUSTOM_DIR, `${label}.js`);
+        
+        if (!fs.existsSync(file)) {
+          return res.status(404).json({ error: 'Not found (only custom prompts can be deleted)' });
+        }
 
-    res.json({ ok: true, prompt: label, deleted: true });
+        // Check if it's a builtin prompt (exists in builtin directory)
+        const builtinFile = path.join(BUILTIN_DIR, `${label}.js`);
+        if (fs.existsSync(builtinFile) && !fs.existsSync(file)) {
+          return res.status(403).json({ error: 'Cannot delete builtin prompts' });
+        }
+
+        // Delete the file
+        await fsp.unlink(file);
+
+        // Clear from require cache
+        try {
+          delete require.cache[require.resolve(file)];
+        } catch (e) {
+          // File might not be in cache, ignore
+        }
+
+        res.json({ ok: true, prompt: label, deleted: true });
+      } else if (dbErr.message.includes('Cannot delete built-in')) {
+        return res.status(403).json({ error: dbErr.message });
+      } else {
+        throw dbErr;
+      }
+    }
   } catch (err) {
     next(err);
   }

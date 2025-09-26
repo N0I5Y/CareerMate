@@ -14,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.873.0",
+    "@prisma/client": "^6.16.2",
     "@supabase/supabase-js": "^2.53.0",
     "bullmq": "^5.58.0",
     "docxtemplater": "^3.65.3",
@@ -34,6 +35,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "docx": "^9.5.1"
+    "docx": "^9.5.1",
+    "prisma": "^6.16.2"
   }
 }

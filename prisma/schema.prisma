@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Prompt {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   String?  @map("created_by")
+  
+  // Prompt configuration
+  model       String   @default("gpt-4o-mini")
+  temperature Float    @default(0.2)
+  
+  // Form metadata (for simple mode)
+  formConfig  Json?    @map("form_config")
+  
+  // Generated/custom base rules
+  baseRules   String   @map("base_rules")
+  
+  // Status and metadata
+  isActive    Boolean  @default(true) @map("is_active")
+  isBuiltin   Boolean  @default(false) @map("is_builtin")
+  description String?
+  tags        String[]
+  
+  // Usage tracking
+  usageCount  Int      @default(0) @map("usage_count")
+  lastUsedAt  DateTime? @map("last_used_at")
+  
+  // Relations
+  versions    PromptVersion[]
+  
+  @@map("prompts")
+}
+
+model PromptVersion {
+  id          String   @id @default(cuid())
+  promptId    String   @map("prompt_id")
+  version     Int
+  baseRules   String   @map("base_rules")
+  formConfig  Json?    @map("form_config")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String?  @map("created_by")
+  changeNotes String?  @map("change_notes")
+  
+  // Relations
+  prompt      Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  
+  @@unique([promptId, version])
+  @@map("prompt_versions")
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  filename    String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   String?  @map("created_by")
+  
+  // File metadata
+  fileSize    Int?     @map("file_size")
+  mimeType    String?  @map("mime_type")
+  fileHash    String?  @map("file_hash")
+  
+  // Template data (for small files, or reference to external storage)
+  fileData    Bytes?   @map("file_data")
+  storageKey  String?  @map("storage_key") // for S3/external storage
+  
+  // Status
+  isActive    Boolean  @default(true) @map("is_active")
+  isDefault   Boolean  @default(false) @map("is_default")
+  
+  // Metadata
+  description String?
+  previewUrl  String?  @map("preview_url")
+  
+  // Usage tracking
+  usageCount  Int      @default(0) @map("usage_count")
+  lastUsedAt  DateTime? @map("last_used_at")
+  
+  @@map("templates")
+}
