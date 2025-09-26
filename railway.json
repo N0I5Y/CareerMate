@@ -1,8 +1,5 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "buildCommand": "npm ci --omit=dev --legacy-peer-deps && npx prisma generate"
-  },
   "deploy": {
     "startCommand": "npm start"
   }
