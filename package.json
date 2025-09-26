@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "npx prisma generate",
+    "postinstall": "npx prisma generate",
     "start": "node apps/api/index.js",
     "dev": "node apps/api/index.js",
     "deploy:railway": "node scripts/deploy-railway.js",

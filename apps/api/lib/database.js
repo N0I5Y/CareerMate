@@ -1,12 +1,21 @@
-const { PrismaClient } = require('@prisma/client');
+let prisma = null;
 
-// Create Prisma client with appropriate configuration
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'info', 'warn', 'error'] 
-    : ['error'],
-  errorFormat: 'pretty',
-});
+try {
+  const { PrismaClient } = require('@prisma/client');
+  
+  // Create Prisma client with appropriate configuration
+  prisma = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' 
+      ? ['query', 'info', 'warn', 'error'] 
+      : ['error'],
+    errorFormat: 'pretty',
+  });
+  
+  console.log('✅ Prisma client initialized successfully');
+} catch (error) {
+  console.warn('⚠️ Prisma client not available:', error.message);
+  console.warn('📄 Falling back to file-based storage only');
+}
 
 // Graceful shutdown
 process.on('beforeExit', async () => {

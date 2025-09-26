@@ -1,10 +1,23 @@
 const prisma = require('../lib/database');
 
 class PromptService {
+  constructor() {
+    this.prismaAvailable = !!prisma;
+    if (!this.prismaAvailable) {
+      console.warn('⚠️ PromptService: Database not available, some features will be limited');
+    }
+  }
+
+  _checkPrisma() {
+    if (!this.prismaAvailable) {
+      throw new Error('Database not available - please check Prisma configuration');
+    }
+  }
   /**
    * Get all prompts
    */
   async getAllPrompts() {
+    this._checkPrisma();
     return await prisma.prompt.findMany({
       where: { isActive: true },
       orderBy: [

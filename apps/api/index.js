@@ -22,6 +22,17 @@ const app = express();
 app.use(cors({ origin: ALLOW_ORIGIN }));
 app.use(express.json());
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const prisma = require('./lib/database');
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    database: prisma ? 'available' : 'unavailable',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Request logging
 app.use((req, res, next) => {
   res.on('finish', () => {
