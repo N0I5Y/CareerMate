@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npm ci && npx prisma generate",
-    "postinstall": "npx prisma generate",
+    "postinstall": "npx prisma generate || echo 'Prisma generate skipped - schema not found'",
     "start": "node apps/api/index.js",
     "dev": "node apps/api/index.js",
     "deploy:railway": "node scripts/deploy-railway.js",

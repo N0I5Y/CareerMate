@@ -9,9 +9,10 @@ RUN apk add --no-cache \
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy only API package files first (for better caching)
+# Copy package files and Prisma schema first (for better caching)
 COPY apps/api/package*.json ./
 COPY apps/api/.npmrc ./
+COPY prisma ./prisma/
 
 # Install only API dependencies
 RUN npm ci --omit=dev --legacy-peer-deps
