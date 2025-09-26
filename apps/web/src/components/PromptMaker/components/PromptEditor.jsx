@@ -28,21 +28,46 @@ const PromptEditor = React.memo(({ mode, initialData, onCancel, onSave }) => {
         force: false
       });
     } else if (mode === 'edit' && promptDetails) {
-      // Parse the existing prompt to extract configuration
-      // This is a simplified parser - in reality, you'd need more robust parsing
-      const codeContent = promptDetails.code || '';
+      // Use metadata if available, otherwise parse code
+      const metadata = promptDetails.metadata;
       
-      // Extract model
-      const modelMatch = codeContent.match(/model:\s*process\.env\.OPENAI_MODEL\s*\|\|\s*["']([^"']+)["']/);
-      const model = modelMatch ? modelMatch[1] : 'gpt-4o-mini';
+      let instructions = '';
+      let model = 'gpt-4o-mini';
+      let temperature = 0.2;
       
-      // Extract temperature
-      const tempMatch = codeContent.match(/temperature:\s*([0-9.]+)/);
-      const temperature = tempMatch ? parseFloat(tempMatch[1]) : 0.2;
+      if (metadata) {
+        // Use metadata for model and temperature
+        model = metadata.model || 'gpt-4o-mini';
+        temperature = metadata.temperature || 0.2;
+        
+        // For instructions, try to extract from baseRules or parse code
+        if (metadata.baseRules) {
+          instructions = metadata.baseRules;
+        }
+      }
       
-      // Extract instructions from the custom section
-      const instructionsMatch = codeContent.match(/CUSTOM INSTRUCTIONS:\s*([\s\S]*?)\s*`\.trim\(\)/);
-      const instructions = instructionsMatch ? instructionsMatch[1].trim() : '';
+      // If no metadata or baseRules, try to parse from code
+      if (!instructions && promptDetails.code) {
+        const codeContent = promptDetails.code;
+        
+        // Extract model from code if not in metadata
+        if (!metadata?.model) {
+          const modelMatch = codeContent.match(/model:\s*process\.env\.OPENAI_MODEL\s*\|\|\s*["']([^"']+)["']/);
+          model = modelMatch ? modelMatch[1] : 'gpt-4o-mini';
+        }
+        
+        // Extract temperature from code if not in metadata
+        if (!metadata?.temperature) {
+          const tempMatch = codeContent.match(/temperature:\s*([0-9.]+)/);
+          temperature = tempMatch ? parseFloat(tempMatch[1]) : 0.2;
+        }
+        
+        // Extract base rules from code
+        const baseRulesMatch = codeContent.match(/const baseRules = `([^`]+)`/s);
+        if (baseRulesMatch && baseRulesMatch[1]) {
+          instructions = baseRulesMatch[1].replace(/\$\{schema\}/g, '${schema}');
+        }
+      }
 
       setFormData({
         instructions,

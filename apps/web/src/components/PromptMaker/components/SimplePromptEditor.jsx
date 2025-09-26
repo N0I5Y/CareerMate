@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePromptDetails } from '../hooks/usePrompts';
 
 // Utility function to extract base rules from existing prompt code
 const extractBaseRulesFromCode = (code) => {
@@ -15,8 +16,29 @@ const extractBaseRulesFromCode = (code) => {
 };
 
 const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
+  // Fetch detailed prompt data for edit mode
+  const { prompt: promptDetails, loading: loadingDetails } = usePromptDetails(
+    mode === 'edit' ? initialData?.label : null
+  );
   // Initialize form data with metadata if available (for edit mode)
   const initializeFormData = () => {
+    if (mode === 'create') {
+      return {
+        name: '',
+        focus: 'general',
+        tone: 'professional',
+        emphasis: 'achievements',
+        atsOptimization: 'standard',
+        formattingStyle: 'concise',
+        qualityFocus: 'impact',
+        customInstructions: '',
+        completeBaseRules: '',
+        model: 'gpt-4o-mini',
+        temperature: 0.2
+      };
+    }
+
+    // For edit mode, use the initialData passed from parent
     const metadata = initialData?.metadata;
     const formConfig = metadata?.formConfig;
     
@@ -29,7 +51,7 @@ const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
       formattingStyle: formConfig?.formattingStyle || 'concise',
       qualityFocus: formConfig?.qualityFocus || 'impact',
       customInstructions: formConfig?.customInstructions || '',
-      completeBaseRules: mode === 'edit' ? extractBaseRulesFromCode(initialData?.code) : '',
+      completeBaseRules: extractBaseRulesFromCode(initialData?.code) || '',
       model: metadata?.model || 'gpt-4o-mini',
       temperature: metadata?.temperature || 0.2
     };
@@ -40,15 +62,16 @@ const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update form data when initialData changes (for async loading)
+  // Update form data when prompt details are loaded (for edit mode)
   useEffect(() => {
-    if (mode === 'edit' && initialData) {
-      const metadata = initialData.metadata;
+    if (mode === 'edit' && promptDetails) {
+      const metadata = promptDetails.metadata;
       const formConfig = metadata?.formConfig;
-      const extractedRules = extractBaseRulesFromCode(initialData.code);
+      const extractedRules = extractBaseRulesFromCode(promptDetails.code);
       
       setFormData(prev => ({
         ...prev,
+        name: promptDetails.label || prev.name,
         // Update form selections from metadata if available
         ...(formConfig && {
           focus: formConfig.focus || prev.focus,
@@ -64,13 +87,11 @@ const SimplePromptEditor = ({ mode, initialData, onCancel, onSave }) => {
           model: metadata.model || prev.model,
           temperature: metadata.temperature || prev.temperature,
         }),
-        // Update base rules from code
-        ...(extractedRules && {
-          completeBaseRules: extractedRules
-        })
+        // Update base rules from code if available
+        completeBaseRules: extractedRules || prev.completeBaseRules
       }));
     }
-  }, [initialData, mode]);
+  }, [promptDetails, mode]);
 
   const focusOptions = [
     { value: 'general', label: 'General Purpose', description: 'Works well for most job types' },
@@ -275,6 +296,23 @@ DATA HYGIENE:
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
+
+  // Show loading state while fetching prompt details in edit mode
+  if (mode === 'edit' && loadingDetails) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center space-x-2">
+            <svg className="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+            <span className="text-gray-600">Loading prompt details...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow">
